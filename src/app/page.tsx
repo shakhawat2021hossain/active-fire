@@ -35,7 +35,7 @@ export default function Home() {
                   A Clearer Picture of Earth&apos;s Burning Activity
                 </h1>
                 <p className="mt-2 max-w-xl text-[15px] leading-7 text-ink-muted md:text-base">
-                  Bridging over two decades of planetary fire telemetry. We statistically reconcile 1km historical MODIS radiative power with 375m sub-kilometer VIIRS active tracking vectors into an uninterrupted, synchronized baseline.
+                  A prototype for comparing MODIS&apos;s long historical record with VIIRS&apos;s finer spatial detail. Explore static sample observations, a harmonized activity view, and seasonal context.
                 </p>
               </div>
               <div className="relative z-10 mt-7 flex flex-wrap items-center justify-between gap-4 border-t border-line/70 pt-5">
@@ -63,7 +63,7 @@ export default function Home() {
               <SensorCard
                 regime="Sensor Regime A"
                 title="MODIS Baseline"
-                badge="Historic"
+                badge="Long record"
                 resolution="1,000m"
                 resolutionLabel="Pixel Resolution"
                 period="2000 – Present"
@@ -73,8 +73,8 @@ export default function Home() {
               />
               <SensorCard
                 regime="Sensor Regime B"
-                title="VIIRS High-Res"
-                badge="Current Apex"
+                title="VIIRS Detail"
+                badge="Finer detail"
                 resolution="375m"
                 resolutionLabel="I-Band Spatial"
                 period="2012 – Present"
@@ -88,8 +88,8 @@ export default function Home() {
           <section className="flex min-h-[540px] flex-col rounded-lg bg-white p-4 shadow-sm md:p-5 lg:col-span-5">
             <div className="flex items-center justify-between gap-3 pb-3">
               <div className="flex min-w-0 flex-col">
-                <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-muted">Harmonized Dual Viewport</span>
-                <h2 className="text-base font-semibold text-ink">Radiative Anomaly Harmonization</h2>
+                <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-muted">Static concept preview</span>
+                <h2 className="text-base font-semibold text-ink">Complementary fire observations</h2>
               </div>
               <span className="size-2.5 shrink-0 rounded-full bg-orange ring-4 ring-orange-soft/60" />
             </div>
@@ -99,19 +99,19 @@ export default function Home() {
                 <span className="font-mono text-[10px] text-ink">GRID [0.01° × 0.01°]</span>
               </div>
               <div className="absolute right-3 top-3 rounded bg-white/90 px-2 py-1 shadow-sm backdrop-blur-sm">
-                <span className="font-mono text-[10px] font-medium text-orange-deep">CALIBRATED</span>
+                <span className="font-mono text-[10px] font-medium text-orange-deep">STATIC DEMO</span>
               </div>
               <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-2 rounded bg-white/95 p-2.5 shadow-sm backdrop-blur-sm">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[10px] text-ink">
                   <span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-amber" />MODIS 1KM</span>
                   <span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-red" />VIIRS 375M</span>
                 </div>
-                <span className="shrink-0 font-mono text-[10px] text-ink-muted">ΔFRP: ±3.8%</span>
+                <span className="shrink-0 font-mono text-[10px] text-ink-muted">SCHEMATIC VIEW</span>
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2 pt-3">
-              <p className="max-w-xs text-xs leading-5 text-ink-muted">Synchronized thermal radiometric contour matching across cross-sensor orbital passes.</p>
-              <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase text-orange-deep"><SlidersHorizontal className="size-3.5" />Auto-correlated</span>
+              <p className="max-w-xs text-xs leading-5 text-ink-muted">Illustrative preview only; no live NASA data or processing is connected.</p>
+              <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase text-orange-deep"><SlidersHorizontal className="size-3.5" />Prototype</span>
             </div>
           </section>
         </div>
@@ -119,8 +119,8 @@ export default function Home() {
 
       <footer className="w-full border-t border-line/60 bg-white py-4">
         <div className="mx-auto flex max-w-[1440px] flex-col items-center justify-between gap-2 px-4 md:flex-row md:px-6 lg:px-10">
-          <p className="text-center font-mono text-[10px] text-ink-muted md:text-left">© Fire Harmonize. Precision Earth Observation telemetry.</p>
-          <p className="font-mono text-[10px] text-ink-muted">STATION: OPERATIONAL [44.0582° N, 121.3153° W]</p>
+          <p className="text-center font-mono text-[10px] text-ink-muted md:text-left">Fire Harmonize · static frontend prototype</p>
+          <p className="font-mono text-[10px] text-ink-muted">NO LIVE DATA CONNECTION · DEMONSTRATION ONLY</p>
         </div>
       </footer>
     </div>
