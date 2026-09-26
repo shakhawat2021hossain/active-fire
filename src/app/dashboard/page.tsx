@@ -18,7 +18,7 @@ import {
   SlidersHorizontal,
   X,
 } from "lucide-react";
-import type { AreaOfInterest } from "@/components/fire-map";
+import type { AreaOfInterest, FireMapObservation } from "@/components/fire-map";
 
 const CaliforniaMap = dynamic(() => import("@/components/fire-map"), { ssr: false });
 
@@ -198,6 +198,13 @@ function ResponderBrief({
   status,
   dominantSensor,
   confidence,
+  aoi,
+  observations,
+  view,
+  mapStyle,
+  recenterKey,
+  selectedObservation,
+  onSelectObservation,
   onClose,
 }: {
   date: string;
@@ -207,12 +214,19 @@ function ResponderBrief({
   status: string;
   dominantSensor: string;
   confidence: string;
+  aoi: AreaOfInterest;
+  observations: FireMapObservation[];
+  view: "RAW" | "HARMONIZED";
+  mapStyle: "standard" | "light";
+  recenterKey: number;
+  selectedObservation: FireMapObservation | null;
+  onSelectObservation: (observationId: string) => void;
   onClose: () => void;
 }) {
   const [shareStatus, setShareStatus] = useState("");
 
   async function shareBrief() {
-    const summary = `Fire Harmonize responder brief | California, USA | ${date} | ${observationsCount.toLocaleString()} observations | Peak FRP ${peakFrp} MW | ${anomaly > 0 ? "+" : ""}${anomaly}% vs seasonal baseline | ${status} | DEMO DATA`;
+    const summary = `Fire Harmonize responder brief | ${aoi} | ${date} | ${observationsCount.toLocaleString()} observations | Peak FRP ${peakFrp} MW | ${anomaly > 0 ? "+" : ""}${anomaly}% vs seasonal baseline | ${status} | DEMO DATA`;
     try {
       await navigator.clipboard.writeText(summary);
       setShareStatus("Brief summary copied.");
@@ -228,9 +242,9 @@ function ResponderBrief({
           <div><span className="section-kicker">FIELD SUMMARY · DEMONSTRATION</span><h2 id="brief-title">Responder Brief</h2></div>
           <button aria-label="Close responder brief" type="button" onClick={onClose}><X /></button>
         </div>
-        <p className="brief-location">California, USA <span>·</span> {date}</p>
-        <div className="brief-map" role="img" aria-label="Illustrative map snapshot of California with sample fire observation locations">
-          <span className="brief-map-label">CALIFORNIA</span><i /><i /><i /><i /><small>ILLUSTRATIVE MAP · STATIC DEMO</small>
+        <p className="brief-location">{aoi} <span>·</span> {date}</p>
+        <div className="brief-map" aria-label={`Map of ${aoi} with filtered fire observations`}>
+          <CaliforniaMap observations={observations} view={view} aoi={aoi} mapStyle={mapStyle} recenterKey={recenterKey} zoomOffset={-1} selectedObservation={selectedObservation} onSelect={onSelectObservation} />
         </div>
         <dl className="brief-metrics">
           <div><dt>Burning activity</dt><dd>{status}</dd></div>
@@ -343,7 +357,7 @@ export default function DashboardPage() {
         <section className="brief-launch-row"><div className="data-provenance-strip"><span>DATA &amp; PROVENANCE · NASA EARTH OBSERVATION DATA</span><p>MODIS Active Fire <span>·</span> VIIRS 375m Active Fire</p></div><button ref={briefTriggerRef} type="button" className="brief-launch" onClick={() => setBriefOpen(true)}><FileText aria-hidden="true" />Generate Responder Brief</button></section>
 
         <section className="control-bar" aria-label="Dashboard controls">
-          <label className="control-field control-aoi"><span>AREA OF INTEREST</span><span className="control-input"><MapPin aria-hidden="true" /><select value={aoi} onChange={(event) => setAoi(event.target.value as AreaOfInterest)} aria-label="Area of interest"><option>California, USA</option><option>Northern California</option><option>Central California</option><option>Southern California</option></select><ChevronDown className="select-chevron" aria-hidden="true" /></span></label>
+          <label className="control-field control-aoi"><span>AREA OF INTEREST</span><span className="control-input"><MapPin aria-hidden="true" /><select value={aoi} onChange={(event) => { setAoi(event.target.value as AreaOfInterest); setSelectedObservation(null); }} aria-label="Area of interest"><option>California, USA</option><option>Northern California</option><option>Central California</option><option>Southern California</option></select><ChevronDown className="select-chevron" aria-hidden="true" /></span></label>
           <div className="control-field control-year"><span>TIME</span><div className="control-input control-static"><CalendarDays aria-hidden="true" /><span>2025</span></div></div>
           <div className="control-field control-range"><span>DATE RANGE</span><div className="control-readonly">01 Jan {year} <span>—</span> 31 Dec {year}</div></div>
           <fieldset className="control-field control-sensor"><legend>SENSOR</legend><div className="segmented-control" role="group" aria-label="Sensor filter">{(["All", "MODIS", "VIIRS"] as const).map((option) => <button aria-pressed={sensor === option} className={sensor === option ? "segment-active" : ""} key={option} onClick={() => { setSensor(option); setSelectedObservation(null); }} type="button">{option}</button>)}</div></fieldset>
@@ -401,7 +415,7 @@ export default function DashboardPage() {
       </section>
       </div>
       }
-      {briefOpen && <ResponderBrief date={formattedDate} observationsCount={selectedDay.observations} peakFrp={peakFrp} anomaly={selectedDay.anomaly} status={selectedDay.activity > 70 ? "High activity" : selectedDay.activity > 40 ? "Elevated activity" : "Typical activity"} dominantSensor={dominantSensor} confidence={confidenceSummary} onClose={() => setBriefOpen(false)} />}
+      {briefOpen && <ResponderBrief date={formattedDate} observationsCount={selectedDay.observations} peakFrp={peakFrp} anomaly={selectedDay.anomaly} status={selectedDay.activity > 70 ? "High activity" : selectedDay.activity > 40 ? "Elevated activity" : "Typical activity"} dominantSensor={dominantSensor} confidence={confidenceSummary} aoi={aoi} observations={demoState === "ready" ? filteredObservations : []} view={view} mapStyle={mapStyle} recenterKey={mapRecenterKey} selectedObservation={selectedObservation} onSelectObservation={(observationId) => { const observation = observations.find((item) => item.id === observationId); if (observation) selectObservation(observation); }} onClose={() => setBriefOpen(false)} />}
     </main>
   );
 }
