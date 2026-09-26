@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   Activity,
@@ -17,6 +18,9 @@ import {
   SlidersHorizontal,
   X,
 } from "lucide-react";
+import type { AreaOfInterest } from "@/components/fire-map";
+
+const CaliforniaMap = dynamic(() => import("@/components/fire-map"), { ssr: false });
 
 type Sensor = "MODIS" | "VIIRS";
 type Confidence = "All" | "High" | "Nominal" | "Low";
@@ -186,79 +190,6 @@ function FrpChart({ selectedDate, filters }: { selectedDate: Date; filters: Dash
   );
 }
 
-function CaliforniaMap({
-  view,
-  filters,
-  aoi,
-  demoState,
-  selectedObservation,
-  onSelect,
-}: {
-  view: "RAW" | "HARMONIZED";
-  filters: DashboardFilters;
-  aoi: string;
-  demoState: "ready" | "loading" | "empty" | "unavailable";
-  selectedObservation: Observation | null;
-  onSelect: (observation: Observation) => void;
-}) {
-  const visible = observations.filter((observation) => {
-    if (demoState === "loading" || demoState === "empty") return false;
-    const latitude = Number(observation.lat);
-    const inArea = aoi === "Northern California" ? latitude >= 39 : aoi === "Central California" ? latitude >= 36 && latitude < 39 : aoi === "Southern California" ? latitude < 36 : true;
-    return inArea && (filters.sensor === "All" || observation.sensor === filters.sensor)
-      && (filters.confidence === "All" || observation.confidenceLevel === filters.confidence)
-      && (filters.timeOfDay === "All" || observation.timeOfDay === filters.timeOfDay)
-      && (filters.fireType === "All" || observation.fireTypeCategory === filters.fireType);
-  });
-  return (
-    <div className={`map-canvas ${view === "HARMONIZED" ? "map-harmonized" : ""}`}>
-      <svg className="map-art" viewBox="0 0 900 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-        <defs>
-          <pattern id="map-grain" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".55" fill="#bfc6b3" opacity=".45" /></pattern>
-          <clipPath id="california-clip"><path d="M302 34 L523 50 L541 115 L558 173 L579 232 L602 290 L624 346 L611 383 L590 423 L570 466 L537 514 L493 557 L440 578 L397 556 L371 514 L339 469 L306 421 L278 377 L256 333 L226 296 L231 254 L249 212 L256 170 L270 128 L284 86 Z" /></clipPath>
-        </defs>
-        <rect width="900" height="600" fill="#edf0e7" />
-        <path d="M0 0h284l-14 86-14 42-7 42-7 42-23 42-4 42 30 37 22 44 28 44 33 48 32 45 26 42 43 22 53-21 44-43 33-48 33-48 25-44 21-41 13-37-22-56-22-58-21-59-18-58-15-55-18-49-221-16H0z" fill="#e5eadf" />
-        <path d="M0 0h266l18 41-22 45-21 42-7 42-7 42-23 42-4 42 30 37 22 44 28 44 33 48 32 45 26 42 43 22 53-21 44-43 33-48 33-48 25-44 21-41 13-37-22-56-22-58-21-59-18-58-15-55-18-49" fill="none" stroke="#ffffff" strokeWidth="6" />
-        <path d="M287 0v600M0 147h900M0 300h900M0 451h900M650 0v600" stroke="#d9ded3" strokeWidth="1" strokeDasharray="3 7" />
-        <path d="M335 0l-4 74 24 62 18 54 22 65 22 66 22 72 22 72 22 91M430 0l-6 80 13 55 16 68 16 68 21 71 24 77 21 68" fill="none" stroke="#d5d3c6" strokeWidth="2" />
-        <path d="M0 229c88-17 126-19 225-7m-202 92c67-6 137-6 235 12M23 431c74-22 127-7 248 1M530 87c90 8 184 6 370-1M606 211c110 17 171 8 294 2M641 399c104 5 153 18 259 37" fill="none" stroke="#d4d8cd" strokeWidth="2" />
-        <path d="M302 34 L523 50 L541 115 L558 173 L579 232 L602 290 L624 346 L611 383 L590 423 L570 466 L537 514 L493 557 L440 578 L397 556 L371 514 L339 469 L306 421 L278 377 L256 333 L226 296 L231 254 L249 212 L256 170 L270 128 L284 86 Z" fill="#f8f7ef" stroke="#858d7d" strokeWidth="2.5" />
-        <g clipPath="url(#california-clip)">
-          <rect x="220" y="30" width="420" height="550" fill="url(#map-grain)" />
-          <path d="M231 190l316-20M225 267l355-22M247 344l352-18M284 420l308-18M336 492l240-22M275 118l277 28M306 72l254 27M374 543l145-14M407 81l-8 446M480 92l-17 423" stroke="#c8cdbf" strokeWidth="1" fill="none" />
-        </g>
-        <path d="M248 214l75 11 67-7 69 21 86-2M232 291l89-18 69 18 93-14 114 12M265 365l87-22 68 16 97-9 91 11M318 445l80-25 72 20 73-18M360 511l85-25 72 11" fill="none" stroke="#d2cdbd" strokeWidth="1.6" />
-        <path d="M279 153L519 365M252 261L496 498M311 91L575 290M297 385L503 169" stroke="#fcfcf8" strokeWidth="2" fill="none" />
-        <text className="map-state-label" x="410" y="311">CALIFORNIA</text>
-        <text className="map-city-label" x="381" y="92">SACRAMENTO</text><circle cx="377" cy="97" r="2.5" fill="#737b70" />
-        <text className="map-city-label" x="449" y="414">FRESNO</text><circle cx="445" cy="409" r="2.5" fill="#737b70" />
-        <text className="map-city-label" x="565" y="507">LOS ANGELES</text><circle cx="559" cy="501" r="2.5" fill="#737b70" />
-        <text className="map-city-label" x="670" y="254">NEVADA</text><text className="map-city-label" x="84" y="310">PACIFIC OCEAN</text>
-        <path d="M45 76v38m0-38l-7 12m7-12 7 12" stroke="#70786b" strokeWidth="1.5" /><text className="map-city-label" x="45" y="68" textAnchor="middle">N</text>
-        <path d="M75 553h60m-60-4v8m60-8v8" stroke="#747b70" strokeWidth="2" /><text className="map-city-label" x="105" y="543" textAnchor="middle">100 km</text>
-      </svg>
-      {view === "HARMONIZED" && <div className="harmonized-wash" aria-hidden="true" />}
-      {visible.map((observation, index) => {
-        const isSelected = selectedObservation?.id === observation.id;
-        return (
-          <button
-            className={`map-marker ${observation.sensor === "MODIS" ? "marker-modis" : "marker-viirs"}${view === "HARMONIZED" ? " marker-common" : ""}${isSelected ? " marker-selected" : ""}`}
-            key={observation.id}
-            style={{ left: `calc(20% + ${observation.x * 0.48}%)`, top: `${4 + observation.y * 0.91}%`, zIndex: isSelected ? 5 : 2 + index }}
-            type="button"
-            aria-label={`Select ${observation.sensor} fire near ${observation.lat}, ${observation.lon}, ${observation.frp} megawatts`}
-            onClick={() => onSelect(observation)}
-          >
-            {view === "RAW" ? observation.sensor === "MODIS" ? <span className="marker-square" /> : <span className="marker-circle" /> : <span className="marker-harmonized-dot" />}
-          </button>
-        );
-      })}
-      <div className="map-attribution">STATIC DEMO · CALIFORNIA</div>
-    </div>
-  );
-}
-
 function ResponderBrief({
   date,
   observationsCount,
@@ -328,9 +259,11 @@ export default function DashboardPage() {
   const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>("All");
   const [fireType, setFireType] = useState<FireType>("All");
   const filters: DashboardFilters = { sensor, confidence, timeOfDay, fireType };
-  const [aoi, setAoi] = useState("California, USA");
+  const [aoi, setAoi] = useState<AreaOfInterest>("California, USA");
   const [selectedDate, setSelectedDate] = useState(new Date(2025, 2, 18));
   const [selectedObservation, setSelectedObservation] = useState<Observation | null>(null);
+  const [mapStyle, setMapStyle] = useState<"standard" | "light">("standard");
+  const [mapRecenterKey, setMapRecenterKey] = useState(0);
   const [methodsOpen, setMethodsOpen] = useState(false);
   const [briefOpen, setBriefOpen] = useState(false);
   const [demoState, setDemoState] = useState<"ready" | "loading" | "empty" | "unavailable">("ready");
@@ -410,7 +343,7 @@ export default function DashboardPage() {
         <section className="brief-launch-row"><div className="data-provenance-strip"><span>DATA &amp; PROVENANCE · NASA EARTH OBSERVATION DATA</span><p>MODIS Active Fire <span>·</span> VIIRS 375m Active Fire</p></div><button ref={briefTriggerRef} type="button" className="brief-launch" onClick={() => setBriefOpen(true)}><FileText aria-hidden="true" />Generate Responder Brief</button></section>
 
         <section className="control-bar" aria-label="Dashboard controls">
-          <label className="control-field control-aoi"><span>AREA OF INTEREST</span><span className="control-input"><MapPin aria-hidden="true" /><select value={aoi} onChange={(event) => setAoi(event.target.value)} aria-label="Area of interest"><option>California, USA</option><option>Northern California</option><option>Central California</option><option>Southern California</option></select><ChevronDown className="select-chevron" aria-hidden="true" /></span></label>
+          <label className="control-field control-aoi"><span>AREA OF INTEREST</span><span className="control-input"><MapPin aria-hidden="true" /><select value={aoi} onChange={(event) => setAoi(event.target.value as AreaOfInterest)} aria-label="Area of interest"><option>California, USA</option><option>Northern California</option><option>Central California</option><option>Southern California</option></select><ChevronDown className="select-chevron" aria-hidden="true" /></span></label>
           <div className="control-field control-year"><span>TIME</span><div className="control-input control-static"><CalendarDays aria-hidden="true" /><span>2025</span></div></div>
           <div className="control-field control-range"><span>DATE RANGE</span><div className="control-readonly">01 Jan {year} <span>—</span> 31 Dec {year}</div></div>
           <fieldset className="control-field control-sensor"><legend>SENSOR</legend><div className="segmented-control" role="group" aria-label="Sensor filter">{(["All", "MODIS", "VIIRS"] as const).map((option) => <button aria-pressed={sensor === option} className={sensor === option ? "segment-active" : ""} key={option} onClick={() => { setSensor(option); setSelectedObservation(null); }} type="button">{option}</button>)}</div></fieldset>
@@ -442,10 +375,10 @@ export default function DashboardPage() {
 
         <section className="map-summary-grid">
           <article className="panel map-panel">
-            <div className="panel-heading map-heading"><div><span className="section-kicker">GEOGRAPHIC DISTRIBUTION</span><h2>California active fires</h2><p>{aoi} <span>·</span> {view === "RAW" ? "Separate detections retain sensor identity." : "Unified visual demo; not a computed data product."}</p></div><div className="map-tools"><button type="button" aria-label="Map layer controls" title="Map layer controls"><Layers2 /></button><button type="button" aria-label="Center map on California" title="Center map on California"><Crosshair /></button></div></div>
+            <div className="panel-heading map-heading"><div><span className="section-kicker">GEOGRAPHIC DISTRIBUTION</span><h2>California active fires</h2><p>{aoi} <span>·</span> {view === "RAW" ? "Separate detections retain sensor identity." : "Unified visual demo; not a computed data product."}</p></div><div className="map-tools"><button type="button" aria-label={`Switch to ${mapStyle === "standard" ? "light" : "standard"} map`} title={`Switch to ${mapStyle === "standard" ? "light" : "standard"} map`} onClick={() => setMapStyle((current) => current === "standard" ? "light" : "standard")}><Layers2 /></button><button type="button" aria-label="Center map on selected area" title="Center map on selected area" onClick={() => setMapRecenterKey((key) => key + 1)}><Crosshair /></button></div></div>
             {demoState !== "ready" && <div className={`data-state-message data-state-${demoState}`} role="status" aria-live="polite">{demoStateLabels[demoState]}</div>}
             <div className="map-legend"><span><i className="legend-modis" />MODIS · square</span><span><i className="legend-viirs" />VIIRS · circle</span><span><i className="legend-harmonized" />Harmonized activity</span><span><i className="legend-selected" />Selected observation</span><span className="map-count">{filteredObservations.length} SHOWN</span></div>
-            <CaliforniaMap view={view} filters={filters} aoi={aoi} demoState={demoState} selectedObservation={selectedObservation} onSelect={selectObservation} />
+            <CaliforniaMap observations={demoState === "ready" ? filteredObservations : []} view={view} aoi={aoi} mapStyle={mapStyle} recenterKey={mapRecenterKey} selectedObservation={selectedObservation} onSelect={(observationId) => { const observation = observations.find((item) => item.id === observationId); if (observation) selectObservation(observation); }} />
             {selectedObservation ? <div className="observation-info"><div className="observation-info-top"><div><span className={`sensor-chip ${selectedObservation.sensor.toLowerCase()}`}>{selectedObservation.sensor}</span><span className="observation-satellite">{selectedObservation.satellite} · {selectedObservation.date}</span></div><button aria-label="Close observation details" type="button" onClick={() => setSelectedObservation(null)}><X /></button></div><div className="observation-data"><span><small>ACQUISITION DATE</small>{selectedObservation.date}</span><span><small>UTC TIME</small>{selectedObservation.time}</span><span><small>LATITUDE</small>{selectedObservation.lat}°</span><span><small>LONGITUDE</small>{selectedObservation.lon}°</span><span><small>FRP</small>{selectedObservation.frp.toLocaleString()} MW</span><span><small>CONFIDENCE</small>{selectedObservation.confidence}</span><span><small>BRIGHTNESS TEMP.</small>{selectedObservation.brightness} K</span><span><small>FIRE TYPE</small>{selectedObservation.fireType}</span><span><small>DAY / NIGHT</small>{selectedObservation.timeOfDay}</span></div></div> : <div className="map-caption"><span><i /> CLICK A MARKER TO INSPECT</span><span>STATIC OBSERVATIONS · NOT LIVE</span></div>}
           </article>
           <aside className="summary-rail">
