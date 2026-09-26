@@ -12,6 +12,7 @@ export default function Home() {
           </a>
           <Button
             render={<a href="/dashboard" />}
+            nativeButton={false}
             className="h-9 rounded-sm bg-orange px-4 font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-white shadow-sm hover:bg-orange-deep"
           >
             Dashboard <ArrowRight className="size-3.5" />
@@ -41,6 +42,7 @@ export default function Home() {
               <div className="relative z-10 mt-7 flex flex-wrap items-center justify-between gap-4 border-t border-line/70 pt-5">
                 <Button
                   render={<a href="/dashboard" />}
+                  nativeButton={false}
                   className="h-10 gap-2 rounded-sm bg-orange px-4 text-sm font-medium text-white shadow-sm hover:bg-orange-deep"
                 >
                   Explore Fire Activity <ArrowRight className="size-4 transition-transform group-hover/button:translate-x-1" />
