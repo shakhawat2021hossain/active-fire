@@ -1,15 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Activity,
   CalendarDays,
   ChevronDown,
+  ClipboardCopy,
   Crosshair,
+  FileText,
   Info,
   Layers2,
   MapPin,
+  Printer,
   Satellite,
   SlidersHorizontal,
   X,
@@ -187,16 +190,19 @@ function CaliforniaMap({
   view,
   filters,
   aoi,
+  demoState,
   selectedObservation,
   onSelect,
 }: {
   view: "RAW" | "HARMONIZED";
   filters: DashboardFilters;
   aoi: string;
+  demoState: "ready" | "loading" | "empty" | "unavailable";
   selectedObservation: Observation | null;
   onSelect: (observation: Observation) => void;
 }) {
   const visible = observations.filter((observation) => {
+    if (demoState === "loading" || demoState === "empty") return false;
     const latitude = Number(observation.lat);
     const inArea = aoi === "Northern California" ? latitude >= 39 : aoi === "Central California" ? latitude >= 36 && latitude < 39 : aoi === "Southern California" ? latitude < 36 : true;
     return inArea && (filters.sensor === "All" || observation.sensor === filters.sensor)
@@ -253,6 +259,68 @@ function CaliforniaMap({
   );
 }
 
+function ResponderBrief({
+  date,
+  observationsCount,
+  peakFrp,
+  anomaly,
+  status,
+  dominantSensor,
+  confidence,
+  onClose,
+}: {
+  date: string;
+  observationsCount: number;
+  peakFrp: string;
+  anomaly: number;
+  status: string;
+  dominantSensor: string;
+  confidence: string;
+  onClose: () => void;
+}) {
+  const [shareStatus, setShareStatus] = useState("");
+
+  async function shareBrief() {
+    const summary = `Fire Harmonize responder brief | California, USA | ${date} | ${observationsCount.toLocaleString()} observations | Peak FRP ${peakFrp} MW | ${anomaly > 0 ? "+" : ""}${anomaly}% vs seasonal baseline | ${status} | DEMO DATA`;
+    try {
+      await navigator.clipboard.writeText(summary);
+      setShareStatus("Brief summary copied.");
+    } catch {
+      setShareStatus(summary);
+    }
+  }
+
+  return (
+    <div className="methods-backdrop brief-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <section className="methods-dialog brief-dialog" role="dialog" aria-modal="true" aria-labelledby="brief-title">
+        <div className="methods-header">
+          <div><span className="section-kicker">FIELD SUMMARY · DEMONSTRATION</span><h2 id="brief-title">Responder Brief</h2></div>
+          <button aria-label="Close responder brief" type="button" onClick={onClose}><X /></button>
+        </div>
+        <p className="brief-location">California, USA <span>·</span> {date}</p>
+        <div className="brief-map" role="img" aria-label="Illustrative map snapshot of California with sample fire observation locations">
+          <span className="brief-map-label">CALIFORNIA</span><i /><i /><i /><i /><small>ILLUSTRATIVE MAP · STATIC DEMO</small>
+        </div>
+        <dl className="brief-metrics">
+          <div><dt>Burning activity</dt><dd>{status}</dd></div>
+          <div><dt>Observation count</dt><dd>{observationsCount.toLocaleString()}</dd></div>
+          <div><dt>Peak FRP</dt><dd>{peakFrp} MW</dd></div>
+          <div><dt>Historical baseline</dt><dd>{anomaly > 0 ? "+" : ""}{anomaly}% vs seasonal baseline</dd></div>
+          <div><dt>Anomaly status</dt><dd>{Math.abs(anomaly) >= 20 ? "Unusual activity" : "Within typical range"}</dd></div>
+          <div><dt>Dominant sensor</dt><dd>{dominantSensor}</dd></div>
+          <div><dt>Confidence</dt><dd>{confidence}</dd></div>
+        </dl>
+        <div className="brief-attribution"><strong>NASA Earth Observation Data</strong><span>MODIS Active Fire · VIIRS 375m Active Fire</span><small>Product names identify intended sources; this brief uses illustrative static values, not live NASA data.</small></div>
+        <div className="brief-actions">
+          <button type="button" onClick={() => window.print()}><Printer />Export PDF</button>
+          <button type="button" onClick={shareBrief}><ClipboardCopy />Share</button>
+        </div>
+        <p className="brief-prototype">Prototype · Static Dataset{shareStatus && <span role="status">{shareStatus}</span>}</p>
+      </section>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const [view, setView] = useState<"RAW" | "HARMONIZED">("RAW");
   const [sensor, setSensor] = useState<"All" | Sensor>("All");
@@ -264,9 +332,42 @@ export default function DashboardPage() {
   const [selectedDate, setSelectedDate] = useState(new Date(2025, 2, 18));
   const [selectedObservation, setSelectedObservation] = useState<Observation | null>(null);
   const [methodsOpen, setMethodsOpen] = useState(false);
+  const [briefOpen, setBriefOpen] = useState(false);
+  const [demoState, setDemoState] = useState<"ready" | "loading" | "empty" | "unavailable">("ready");
+  const briefTriggerRef = useRef<HTMLButtonElement>(null);
+  const methodsTriggerRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!methodsOpen && !briefOpen) return;
+    const dialog = document.querySelector<HTMLElement>("[role='dialog']");
+    const focusable = dialog ? Array.from(dialog.querySelectorAll<HTMLElement>("button:not([disabled]), a[href], select, [tabindex]:not([tabindex='-1'])")) : [];
+    focusable[0]?.focus();
+    function handleDialogKeys(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setBriefOpen(false);
+        setMethodsOpen(false);
+        window.requestAnimationFrame(() => (briefOpen ? briefTriggerRef.current : methodsTriggerRef.current)?.focus());
+        return;
+      }
+      if (event.key !== "Tab" || focusable.length < 2) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+    document.addEventListener("keydown", handleDialogKeys);
+    return () => document.removeEventListener("keydown", handleDialogKeys);
+  }, [briefOpen, methodsOpen]);
   const year = "2025";
   const formattedDate = dayLabel(selectedDate);
-  const selectedDay = dailyActivity(selectedDate, filters);
+  const activeDay = dailyActivity(selectedDate, filters);
+  const selectedDay = demoState === "empty" || demoState === "loading"
+    ? { ...activeDay, observations: 0, activity: 0, meanFrp: 0, frp: 0, anomaly: 0 }
+    : activeDay;
   const isReferenceDay = dateKey(selectedDate) === "2025-03-18";
   const filteredObservations = observations.filter((item) => {
     const latitude = Number(item.lat);
@@ -277,13 +378,19 @@ export default function DashboardPage() {
       && (fireType === "All" || item.fireTypeCategory === fireType);
   });
   const areaTotal = aoi === "Northern California" ? 6200 : aoi === "Central California" ? 4150 : aoi === "Southern California" ? 2496 : 12846;
-  const observationTotal = Math.round(areaTotal * (sensor === "MODIS" ? 0.328 : sensor === "VIIRS" ? 0.672 : 1) * (confidence === "All" ? 1 : confidence === "High" ? 0.43 : confidence === "Nominal" ? 0.48 : 0.09) * (timeOfDay === "All" ? 1 : timeOfDay === "Day" ? 0.72 : 0.28) * (fireType === "All" ? 1 : fireType === "Vegetation" ? 0.91 : fireType === "Volcano" ? 0.035 : fireType === "Static" ? 0.035 : 0.02));
+  const observationTotal = demoState === "empty" || demoState === "loading" ? 0 : Math.round(areaTotal * (sensor === "MODIS" ? 0.328 : sensor === "VIIRS" ? 0.672 : 1) * (confidence === "All" ? 1 : confidence === "High" ? 0.43 : confidence === "Nominal" ? 0.48 : 0.09) * (timeOfDay === "All" ? 1 : timeOfDay === "Day" ? 0.72 : 0.28) * (fireType === "All" ? 1 : fireType === "Vegetation" ? 0.91 : fireType === "Volcano" ? 0.035 : fireType === "Static" ? 0.035 : 0.02));
   const peakFrp = selectedDay.frp.toLocaleString();
   const dominantSensor = filteredObservations.filter((item) => item.sensor === "VIIRS").length >= filteredObservations.filter((item) => item.sensor === "MODIS").length ? "VIIRS" : "MODIS";
   const modisShare = filteredObservations.length ? Math.round(filteredObservations.filter((item) => item.sensor === "MODIS").length / filteredObservations.length * 100) : 0;
   const viirsShare = 100 - modisShare;
   const confidenceSummary = confidence === "All" ? "Mixed" : confidence;
   const frpMonthDays = new Date(2025, selectedDate.getMonth() + 1, 0).getDate();
+  const demoStateLabels = {
+    ready: "Prototype · Static Dataset",
+    loading: "Loading active-fire observations…",
+    empty: "No active-fire observations found for this period.",
+    unavailable: "Data unavailable. Showing cached demonstration data.",
+  };
 
   function selectObservation(observation: Observation) {
     setSelectedObservation(observation);
@@ -294,12 +401,13 @@ export default function DashboardPage() {
     <main className="dashboard-shell">
       <header className="dashboard-header">
         <div className="dashboard-brand"><Link href="/" className="brand-mark" aria-label="Fire Harmonize home"><span /></Link><Link href="/" className="brand-name">Fire Harmonize</Link><span className="brand-divider" /><span className="brand-subtitle">MODIS × VIIRS ACTIVE FIRE</span></div>
-        <nav className="dashboard-nav" aria-label="Main navigation"><a className="nav-active" href="/dashboard">Dashboard</a><button className="nav-methods" type="button" onClick={() => setMethodsOpen(true)}>Methods &amp; Provenance</button></nav>
-        <div className="demo-status"><span className="demo-status-dot" />NASA DATA <i /> DEMO MODE</div>
+        <nav className="dashboard-nav" aria-label="Main navigation"><a className="nav-active" href="/dashboard">Dashboard</a><button ref={methodsTriggerRef} className="nav-methods" type="button" onClick={() => setMethodsOpen(true)}>Methods &amp; Provenance</button></nav>
+        <div className="demo-status"><span className="demo-status-dot" />NASA DATA <i /> DEMO DATA</div>
       </header>
 
       <div className="dashboard-content">
-        <section className="dashboard-intro"><div><div className="eyebrow"><span>FIRE ACTIVITY MONITOR</span><span className="eyebrow-divider" />UNITED STATES</div><h1>Active fire observations</h1><p>Explore sensor observations, harmonized activity, and seasonal context.</p></div><div className="data-stamp"><span>DATASET</span><strong>STATIC DEMO</strong><small>Illustrative · 2025</small></div></section>
+        <section className="dashboard-intro"><div><div className="eyebrow"><span>FIRE ACTIVITY MONITOR</span><span className="eyebrow-divider" />UNITED STATES</div><h1>Active fire observations</h1><p>Explore sensor observations, harmonized activity, and seasonal context.</p></div><div className="data-stamp"><span>NASA EARTH OBSERVATION DATA</span><strong>DEMO DATA</strong><label htmlFor="demo-state">OBSERVATION STATUS</label><select id="demo-state" value={demoState} onChange={(event) => setDemoState(event.target.value as typeof demoState)}><option value="ready">Prototype · Static Dataset</option><option value="loading">Loading preview</option><option value="empty">No observations</option><option value="unavailable">Data unavailable</option></select></div></section>
+        <section className="brief-launch-row"><div className="data-provenance-strip"><span>DATA &amp; PROVENANCE · NASA EARTH OBSERVATION DATA</span><p>MODIS Active Fire <span>·</span> VIIRS 375m Active Fire</p></div><button ref={briefTriggerRef} type="button" className="brief-launch" onClick={() => setBriefOpen(true)}><FileText aria-hidden="true" />Generate Responder Brief</button></section>
 
         <section className="control-bar" aria-label="Dashboard controls">
           <label className="control-field control-aoi"><span>AREA OF INTEREST</span><span className="control-input"><MapPin aria-hidden="true" /><select value={aoi} onChange={(event) => setAoi(event.target.value)} aria-label="Area of interest"><option>California, USA</option><option>Northern California</option><option>Central California</option><option>Southern California</option></select><ChevronDown className="select-chevron" aria-hidden="true" /></span></label>
@@ -318,9 +426,9 @@ export default function DashboardPage() {
 
         <section className="sensor-comparison panel" aria-label="Complementary sensor observations">
           <div className="sensor-compare-intro"><span className="section-kicker">COMPLEMENTARY OBSERVATIONS</span><h2>Two sensors, one clearer picture</h2></div>
-          <div className="sensor-compare-item modis-compare"><span>MODIS</span><strong>~1 km</strong><small>Terra / Aqua · long historical record</small><small>FRP · confidence</small></div>
+          <div className="sensor-compare-item modis-compare"><span>NASA MODIS ACTIVE FIRE</span><strong>~1 km</strong><small>Terra / Aqua · long historical record</small><small>Fire radiative power · confidence</small></div>
           <span className="sensor-compare-plus" aria-hidden="true">+</span>
-          <div className="sensor-compare-item viirs-compare"><span>VIIRS</span><strong>~375 m</strong><small>Suomi NPP / NOAA-20 / NOAA-21</small><small>Higher spatial detail · FRP · confidence</small></div>
+          <div className="sensor-compare-item viirs-compare"><span>NASA VIIRS 375M ACTIVE FIRE</span><strong>~375 m</strong><small>Suomi NPP / NOAA-20 / NOAA-21</small><small>Higher spatial detail · fire radiative power · confidence</small></div>
           <span className="sensor-compare-arrow" aria-hidden="true">→</span>
           <div className="sensor-compare-result"><span>HARMONIZED ACTIVITY</span><small>A shared signal for comparison</small></div>
         </section>
@@ -335,8 +443,9 @@ export default function DashboardPage() {
         <section className="map-summary-grid">
           <article className="panel map-panel">
             <div className="panel-heading map-heading"><div><span className="section-kicker">GEOGRAPHIC DISTRIBUTION</span><h2>California active fires</h2><p>{aoi} <span>·</span> {view === "RAW" ? "Separate detections retain sensor identity." : "Unified visual demo; not a computed data product."}</p></div><div className="map-tools"><button type="button" aria-label="Map layer controls" title="Map layer controls"><Layers2 /></button><button type="button" aria-label="Center map on California" title="Center map on California"><Crosshair /></button></div></div>
-            <div className="map-legend"><span><i className="legend-modis" />MODIS</span><span><i className="legend-viirs" />VIIRS</span><span><i className="legend-harmonized" />Harmonized activity</span><span><i className="legend-selected" />Selected observation</span><span className="map-count">{filteredObservations.length} SHOWN</span></div>
-            <CaliforniaMap view={view} filters={filters} aoi={aoi} selectedObservation={selectedObservation} onSelect={selectObservation} />
+            {demoState !== "ready" && <div className={`data-state-message data-state-${demoState}`} role="status" aria-live="polite">{demoStateLabels[demoState]}</div>}
+            <div className="map-legend"><span><i className="legend-modis" />MODIS · square</span><span><i className="legend-viirs" />VIIRS · circle</span><span><i className="legend-harmonized" />Harmonized activity</span><span><i className="legend-selected" />Selected observation</span><span className="map-count">{filteredObservations.length} SHOWN</span></div>
+            <CaliforniaMap view={view} filters={filters} aoi={aoi} demoState={demoState} selectedObservation={selectedObservation} onSelect={selectObservation} />
             {selectedObservation ? <div className="observation-info"><div className="observation-info-top"><div><span className={`sensor-chip ${selectedObservation.sensor.toLowerCase()}`}>{selectedObservation.sensor}</span><span className="observation-satellite">{selectedObservation.satellite} · {selectedObservation.date}</span></div><button aria-label="Close observation details" type="button" onClick={() => setSelectedObservation(null)}><X /></button></div><div className="observation-data"><span><small>ACQUISITION DATE</small>{selectedObservation.date}</span><span><small>UTC TIME</small>{selectedObservation.time}</span><span><small>LATITUDE</small>{selectedObservation.lat}°</span><span><small>LONGITUDE</small>{selectedObservation.lon}°</span><span><small>FRP</small>{selectedObservation.frp.toLocaleString()} MW</span><span><small>CONFIDENCE</small>{selectedObservation.confidence}</span><span><small>BRIGHTNESS TEMP.</small>{selectedObservation.brightness} K</span><span><small>FIRE TYPE</small>{selectedObservation.fireType}</span><span><small>DAY / NIGHT</small>{selectedObservation.timeOfDay}</span></div></div> : <div className="map-caption"><span><i /> CLICK A MARKER TO INSPECT</span><span>STATIC OBSERVATIONS · NOT LIVE</span></div>}
           </article>
           <aside className="summary-rail">
@@ -355,7 +464,11 @@ export default function DashboardPage() {
 
         <footer className="dashboard-footer"><span><Satellite />FIRE HARMONIZE <i /> STATIC FRONTEND PROTOTYPE</span><span>NO NASA API CONNECTION · VALUES FOR DEMONSTRATION ONLY</span></footer>
       </div>
-      {methodsOpen && <div className="methods-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setMethodsOpen(false); }}><section className="methods-dialog" role="dialog" aria-modal="true" aria-labelledby="methods-title"><div className="methods-header"><div><span className="section-kicker">TRANSPARENT BY DESIGN</span><h2 id="methods-title">Methods &amp; Provenance</h2></div><button aria-label="Close methods and provenance" type="button" onClick={() => setMethodsOpen(false)}><X /></button></div><p className="methods-prototype-label">PROTOTYPE PROCESSING FRAMEWORK · NOT AN EXECUTED PIPELINE</p><div className="methods-sources"><div><span>DATA SOURCES</span><strong>NASA MODIS Active Fire</strong><small>~1 km · Terra / Aqua</small></div><div><span>DATA SOURCES</span><strong>NASA VIIRS 375m Active Fire</strong><small>375 m · Suomi NPP / NOAA-20 / NOAA-21</small></div></div><div className="methods-flow"><span>NASA Active Fire Observations</span><i>↓</i><span>Quality / confidence filtering</span><i>↓</i><span>Spatial + temporal alignment</span><i>↓</i><span>Sensor-aware normalization</span><i>↓</i><span>Harmonized activity signal</span><i>↓</i><span>Historical seasonal baseline</span><i>↓</i><span>Anomaly analysis</span></div><div className="provenance-section"><h3>Observation provenance shown in this demo</h3><dl><div><dt>Sensor</dt><dd>MODIS or VIIRS</dd></div><div><dt>Satellite / platform</dt><dd>Terra, Aqua, Suomi NPP, NOAA-20, NOAA-21</dd></div><div><dt>Spatial resolution</dt><dd>~1 km MODIS · 375 m VIIRS</dd></div><div><dt>Acquisition time</dt><dd>Static UTC timestamp in observation inspector</dd></div><div><dt>FRP and confidence</dt><dd>Illustrative demo values</dd></div><div><dt>Data source</dt><dd>NASA Active Fire product names; no live connection</dd></div><div><dt>Status</dt><dd>Static frontend prototype · no processing executed</dd></div></dl></div><p className="methods-note">The framework describes a future analysis structure only. No specific harmonization algorithm is implemented here.</p></section></div>}
+      {methodsOpen && <div className="methods-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setMethodsOpen(false); }}><section className="methods-dialog" role="dialog" aria-modal="true" aria-labelledby="methods-title"><div className="methods-header"><div><span className="section-kicker">TRANSPARENT BY DESIGN</span><h2 id="methods-title">Methods &amp; Provenance</h2></div><button aria-label="Close methods and provenance" type="button" onClick={() => setMethodsOpen(false)}><X /></button></div><p className="methods-prototype-label">PROTOTYPE PROCESSING FRAMEWORK · NOT AN EXECUTED PIPELINE</p><div className="methods-sources"><div><span>NASA DATA SOURCE</span><strong>MODIS Active Fire</strong><small>~1 km · Terra / Aqua · long historical record</small></div><div><span>NASA DATA SOURCE</span><strong>VIIRS 375m Active Fire</strong><small>375 m · Suomi NPP / NOAA-20 / NOAA-21</small></div></div><div className="methods-flow"><div className="methods-sensor-step"><strong>MODIS</strong><span>~1 km · long historical record</span></div><div className="methods-sensor-step"><strong>VIIRS</strong><span>~375 m · higher spatial detail</span></div><i>↓</i><span>Sensor-aware harmonization</span><i>↓</i><span>Common burning-activity representation</span></div><div className="methods-detail-grid"><div><strong>Processing &amp; alignment</strong><span>A proposed workflow aligns observations across space and time before sensor-aware comparison; no processing runs in this demo.</span></div><div><strong>Confidence handling</strong><span>Source confidence is retained as context for interpreting observations, not presented as a guarantee.</span></div><div><strong>Historical baseline</strong><span>Seasonal activity is compared with a typical historical pattern; this prototype uses illustrative values.</span></div></div>
+      </section>
+      </div>
+      }
+      {briefOpen && <ResponderBrief date={formattedDate} observationsCount={selectedDay.observations} peakFrp={peakFrp} anomaly={selectedDay.anomaly} status={selectedDay.activity > 70 ? "High activity" : selectedDay.activity > 40 ? "Elevated activity" : "Typical activity"} dominantSensor={dominantSensor} confidence={confidenceSummary} onClose={() => setBriefOpen(false)} />}
     </main>
   );
 }

@@ -32,10 +32,10 @@ export default function Home() {
                   <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-muted">EO-SENS-HARMONIC // 01</span>
                 </div>
                 <h1 className="mt-2 max-w-xl text-[30px] font-semibold leading-[1.15] tracking-[-0.025em] text-ink md:text-[40px] md:leading-[1.2]">
-                  A Clearer Picture of Earth&apos;s Burning Activity
+                  From Fragmented Satellite Observations to a Clearer Picture
                 </h1>
                 <p className="mt-2 max-w-xl text-[15px] leading-7 text-ink-muted md:text-base">
-                  A prototype for comparing MODIS&apos;s long historical record with VIIRS&apos;s finer spatial detail. Explore static sample observations, a harmonized activity view, and seasonal context.
+                  MODIS and VIIRS observe fire at different spatial scales, making direct comparison difficult. This prototype explores a common burning-activity view with seasonal context; all displayed observations are static demonstration data.
                 </p>
               </div>
               <div className="relative z-10 mt-7 flex flex-wrap items-center justify-between gap-4 border-t border-line/70 pt-5">
