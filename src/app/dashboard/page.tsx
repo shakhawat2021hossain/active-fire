@@ -347,7 +347,7 @@ export default function DashboardPage() {
   return (
     <main className="dashboard-shell">
       <header className="dashboard-header">
-        <div className="dashboard-brand"><Link href="/" className="brand-mark" aria-label="Fire Harmonize home"><span /></Link><Link href="/" className="brand-name">Fire Harmonize</Link><span className="brand-divider" /><span className="brand-subtitle">MODIS × VIIRS ACTIVE FIRE</span></div>
+        <div className="dashboard-brand"><Link href="/" className="brand-mark" aria-label="Fire Harmonize home"><span /></Link><Link href="/" className="brand-name">Ember Grid</Link><span className="brand-divider" /><span className="brand-subtitle">MODIS × VIIRS ACTIVE FIRE</span></div>
         <nav className="dashboard-nav" aria-label="Main navigation"><a className="nav-active" href="/dashboard">Dashboard</a><button ref={methodsTriggerRef} className="nav-methods" type="button" onClick={() => setMethodsOpen(true)}>Methods &amp; Provenance</button></nav>
         <div className="demo-status"><span className="demo-status-dot" />NASA DATA <i /> DEMO DATA</div>
       </header>
@@ -371,14 +371,14 @@ export default function DashboardPage() {
           <span className="filter-state">{filteredObservations.length} matching demo observations</span>
         </section>
 
-        <section className="sensor-comparison panel" aria-label="Complementary sensor observations">
+        {/* <section className="sensor-comparison panel" aria-label="Complementary sensor observations">
           <div className="sensor-compare-intro"><span className="section-kicker">COMPLEMENTARY OBSERVATIONS</span><h2>Two sensors, one clearer picture</h2></div>
           <div className="sensor-compare-item modis-compare"><span>NASA MODIS ACTIVE FIRE</span><strong>~1 km</strong><small>Terra / Aqua · long historical record</small><small>Fire radiative power · confidence</small></div>
           <span className="sensor-compare-plus" aria-hidden="true">+</span>
           <div className="sensor-compare-item viirs-compare"><span>NASA VIIRS 375M ACTIVE FIRE</span><strong>~375 m</strong><small>Suomi NPP / NOAA-20 / NOAA-21</small><small>Higher spatial detail · fire radiative power · confidence</small></div>
           <span className="sensor-compare-arrow" aria-hidden="true">→</span>
           <div className="sensor-compare-result"><span>HARMONIZED ACTIVITY</span><small>A shared signal for comparison</small></div>
-        </section>
+        </section> */}
 
         <section className="metrics-row" aria-label="Activity summary">
           <article className="metric"><span>{view === "RAW" ? "RAW OBSERVATIONS" : "HARMONIZED ACTIVITY"} <Info aria-label="Static demo summary for the selected filters" /></span><strong>{view === "RAW" ? observationTotal.toLocaleString() : selectedDay.activity.toLocaleString()}</strong><small>{view === "RAW" ? `MODIS ${Math.round(observationTotal * 0.328).toLocaleString()} · VIIRS ${Math.round(observationTotal * 0.672).toLocaleString()}` : `Unified index · ${aoi}`}</small></article>

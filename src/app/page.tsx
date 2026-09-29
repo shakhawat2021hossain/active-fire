@@ -8,7 +8,7 @@ export default function Home() {
         <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-4 md:px-6 lg:px-10">
           <a className="group flex items-center gap-2 text-heading font-semibold" href="#overview">
             <span className="size-2 rounded-full bg-orange transition-transform duration-200 group-hover:scale-125" />
-            Fire Harmonize
+            Ember Grid
           </a>
           <Button
             render={<a href="/dashboard" />}
