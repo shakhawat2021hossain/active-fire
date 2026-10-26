@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Fire Harmonize | Earth Observation Telemetry",
+  title: "Ember Grid | Earth Observation Telemetry",
   description:
     "A synchronized baseline for two decades of MODIS and VIIRS active fire observations.",
 };

@@ -1,270 +1,39 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   Activity,
   CalendarDays,
   ChevronDown,
-  ClipboardCopy,
   Crosshair,
   FileText,
   Info,
   Layers2,
   MapPin,
-  Printer,
   Satellite,
   SlidersHorizontal,
   X,
 } from "lucide-react";
-import type { AreaOfInterest, FireMapObservation } from "@/components/fire-map";
+import type { AreaOfInterest } from "@/components/fire-map";
+import { CalendarHeatmap, FrpChart, SeasonalChart } from "@/components/dashboard/dashboard-visualizations";
+import ResponderBrief from "@/components/dashboard/responder-brief";
+import {
+  dailyActivity,
+  dateKey,
+  dayLabel,
+  monthNames,
+  observations,
+  type Confidence,
+  type DashboardFilters,
+  type FireType,
+  type Observation,
+  type Sensor,
+  type TimeOfDay,
+} from "@/components/dashboard/dashboard-data";
 
 const CaliforniaMap = dynamic(() => import("@/components/fire-map"), { ssr: false });
-
-type Sensor = "MODIS" | "VIIRS";
-type Confidence = "All" | "High" | "Nominal" | "Low";
-type TimeOfDay = "All" | "Day" | "Night";
-type FireType = "All" | "Vegetation" | "Volcano" | "Static" | "Offshore";
-type DashboardFilters = { sensor: "All" | Sensor; confidence: Confidence; timeOfDay: TimeOfDay; fireType: FireType };
-type Observation = {
-  id: string;
-  sensor: Sensor;
-  satellite: string;
-  date: string;
-  time: string;
-  lat: string;
-  lon: string;
-  frp: number;
-  confidence: string;
-  confidenceLevel: Exclude<Confidence, "All">;
-  timeOfDay: Exclude<TimeOfDay, "All">;
-  fireTypeCategory: Exclude<FireType, "All">;
-  brightness: number;
-  fireType: string;
-  x: number;
-  y: number;
-};
-
-const observationRecords: Omit<Observation, "confidenceLevel" | "timeOfDay" | "fireTypeCategory">[] = [
-  { id: "v1", sensor: "VIIRS", satellite: "NOAA-20", date: "18 Mar 2025", time: "20:42:16", lat: "39.7284", lon: "-121.6182", frp: 1284, confidence: "High · 94%", brightness: 367.8, fireType: "Vegetation fire", x: 42, y: 29 },
-  { id: "m1", sensor: "MODIS", satellite: "TERRA", date: "18 Mar 2025", time: "19:51:08", lat: "39.6842", lon: "-121.7021", frp: 842, confidence: "Nominal", brightness: 341.2, fireType: "Vegetation fire", x: 39, y: 31 },
-  { id: "v2", sensor: "VIIRS", satellite: "S-NPP", date: "18 Mar 2025", time: "21:06:44", lat: "40.1285", lon: "-121.3261", frp: 614, confidence: "High · 89%", brightness: 351.6, fireType: "Vegetation fire", x: 45, y: 22 },
-  { id: "v3", sensor: "VIIRS", satellite: "NOAA-21", date: "18 Mar 2025", time: "21:14:02", lat: "38.1481", lon: "-120.4148", frp: 462, confidence: "High · 91%", brightness: 338.3, fireType: "Vegetation fire", x: 56, y: 47 },
-  { id: "m2", sensor: "MODIS", satellite: "AQUA", date: "18 Mar 2025", time: "20:19:36", lat: "37.7486", lon: "-120.9142", frp: 391, confidence: "Nominal", brightness: 329.7, fireType: "Vegetation fire", x: 52, y: 57 },
-  { id: "v4", sensor: "VIIRS", satellite: "S-NPP", date: "18 Mar 2025", time: "21:27:51", lat: "36.8241", lon: "-119.6844", frp: 348, confidence: "High · 88%", brightness: 342.8, fireType: "Vegetation fire", x: 62, y: 66 },
-  { id: "v5", sensor: "VIIRS", satellite: "NOAA-20", date: "18 Mar 2025", time: "21:31:09", lat: "41.0821", lon: "-123.0174", frp: 274, confidence: "Nominal", brightness: 319.5, fireType: "Vegetation fire", x: 29, y: 13 },
-  { id: "m3", sensor: "MODIS", satellite: "TERRA", date: "18 Mar 2025", time: "19:43:20", lat: "34.8412", lon: "-118.6238", frp: 226, confidence: "Nominal", brightness: 326.9, fireType: "Vegetation fire", x: 72, y: 79 },
-  { id: "v6", sensor: "VIIRS", satellite: "NOAA-21", date: "18 Mar 2025", time: "21:44:11", lat: "37.1628", lon: "-119.3821", frp: 204, confidence: "High · 92%", brightness: 337.1, fireType: "Vegetation fire", x: 66, y: 58 },
-  { id: "m4", sensor: "MODIS", satellite: "AQUA", date: "18 Mar 2025", time: "20:27:54", lat: "38.0241", lon: "-121.9820", frp: 183, confidence: "Nominal", brightness: 312.6, fireType: "Vegetation fire", x: 37, y: 48 },
-  { id: "v7", sensor: "VIIRS", satellite: "S-NPP", date: "18 Mar 2025", time: "21:19:08", lat: "35.9144", lon: "-118.4170", frp: 176, confidence: "Nominal", brightness: 321.4, fireType: "Vegetation fire", x: 76, y: 71 },
-  { id: "m5", sensor: "MODIS", satellite: "TERRA", date: "18 Mar 2025", time: "19:38:47", lat: "40.6517", lon: "-122.5850", frp: 143, confidence: "Nominal", brightness: 308.8, fireType: "Vegetation fire", x: 34, y: 17 },
-  { id: "v8", sensor: "VIIRS", satellite: "NOAA-20", date: "18 Mar 2025", time: "21:53:31", lat: "34.2801", lon: "-117.4689", frp: 121, confidence: "High · 86%", brightness: 316.4, fireType: "Vegetation fire", x: 84, y: 88 },
-  { id: "m6", sensor: "MODIS", satellite: "AQUA", date: "18 Mar 2025", time: "20:34:18", lat: "39.2491", lon: "-120.0772", frp: 94, confidence: "Nominal", brightness: 301.7, fireType: "Vegetation fire", x: 58, y: 36 },
-  { id: "v9", sensor: "VIIRS", satellite: "NOAA-21", date: "18 Mar 2025", time: "21:02:12", lat: "40.4921", lon: "-121.5050", frp: 59, confidence: "Low", brightness: 306.2, fireType: "Volcano", x: 49, y: 18 },
-  { id: "m7", sensor: "MODIS", satellite: "TERRA", date: "18 Mar 2025", time: "19:56:43", lat: "37.8044", lon: "-122.2712", frp: 39, confidence: "Nominal", brightness: 301.1, fireType: "Static", x: 32, y: 52 },
-  { id: "v10", sensor: "VIIRS", satellite: "S-NPP", date: "18 Mar 2025", time: "21:18:57", lat: "33.9212", lon: "-120.7310", frp: 23, confidence: "Low", brightness: 298.4, fireType: "Offshore", x: 46, y: 91 },
-];
-
-const observations: Observation[] = observationRecords.map((observation, index) => ({
-  ...observation,
-  confidenceLevel: observation.confidence.startsWith("High") ? "High" : observation.confidence === "Low" ? "Low" : "Nominal",
-  timeOfDay: [1, 5, 9, 13, 16].includes(index) ? "Night" : "Day",
-  fireTypeCategory: observation.fireType === "Vegetation fire" ? "Vegetation" : observation.fireType as Exclude<FireType, "All">,
-}));
-
-const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const dayOfYear = (date: Date) => Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000);
-const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-
-function dailyActivity(date: Date, filters?: DashboardFilters) {
-  const day = dayOfYear(date);
-  const seasonal = Math.max(0, Math.sin(((day - 90) / 365) * Math.PI * 2));
-  const pulse = Math.max(0, 1 - Math.abs(day - 77) / 13);
-  const summerPulse = Math.max(0, 1 - Math.abs(day - 230) / 45);
-  const wobble = (Math.sin(day * 12.9898) + Math.cos(day * 4.1414)) * 0.5;
-  const sensorFactor = filters?.sensor === "MODIS" ? 0.328 : filters?.sensor === "VIIRS" ? 0.672 : 1;
-  const confidenceFactor = filters?.confidence === "High" ? 0.43 : filters?.confidence === "Nominal" ? 0.48 : filters?.confidence === "Low" ? 0.09 : 1;
-  const timeFactor = filters?.timeOfDay === "Day" ? 0.72 : filters?.timeOfDay === "Night" ? 0.28 : 1;
-  const fireFactor = filters?.fireType === "All" || !filters ? 1 : filters.fireType === "Vegetation" ? 0.91 : filters.fireType === "Volcano" ? 0.035 : filters.fireType === "Static" ? 0.035 : 0.02;
-  const multiplier = sensorFactor * confidenceFactor * timeFactor * fireFactor;
-  const baseObservations = dateKey(date) === "2025-03-18" ? 428 : Math.max(0, Math.round(18 + seasonal * 175 + pulse * 235 + summerPulse * 270 + wobble * 28));
-  const observationsCount = Math.round(baseObservations * multiplier);
-  const baseActivity = dateKey(date) === "2025-03-18" ? 89 : Math.min(100, Math.round(baseObservations / 4.8));
-  const activity = Math.min(100, Math.round(baseActivity * (filters?.sensor === "All" || !filters ? 1 : 0.84) * (filters?.confidence === "All" || !filters ? 1 : 0.87) * (filters?.timeOfDay === "All" || !filters ? 1 : 0.9) * (filters?.fireType === "All" || !filters ? 1 : filters.fireType === "Vegetation" ? 1 : 0.56)));
-  const baseFrp = dateKey(date) === "2025-03-18" ? 1284 : Math.round(90 + baseObservations * 1.42);
-  const frp = Math.max(0, Math.round(baseFrp * (filters?.sensor === "MODIS" ? 0.74 : filters?.sensor === "VIIRS" ? 1 : 1) * (filters?.confidence === "Low" ? 0.35 : 1) * (filters?.fireType === "All" || !filters || filters.fireType === "Vegetation" ? 1 : 0.24)));
-  const anomaly = dateKey(date) === "2025-03-18" ? 42 : Math.round(wobble * 14 + seasonal * 8);
-  return {
-    date,
-    key: dateKey(date),
-    observations: observationsCount,
-    activity,
-    meanFrp: observationsCount ? Math.max(0, Math.round(frp / Math.max(1, observationsCount / 38))) : 0,
-    frp,
-    anomaly,
-  };
-}
-
-function dayLabel(date: Date) {
-  return `${String(date.getDate()).padStart(2, "0")} ${monthNames[date.getMonth()].toUpperCase()} ${date.getFullYear()}`;
-}
-
-function CalendarHeatmap({ selectedDate, onSelect, filters, view }: { selectedDate: Date; onSelect: (date: Date) => void; filters: DashboardFilters; view: "RAW" | "HARMONIZED" }) {
-  const days = useMemo(() => Array.from({ length: 365 }, (_, index) => dailyActivity(new Date(2025, 0, index + 1), filters)), [filters]);
-  const firstOffset = new Date(2025, 0, 1).getDay();
-  const monthStarts = monthNames.map((month, index) => ({ month, week: Math.floor((firstOffset + dayOfYear(new Date(2025, index, 1)) - 1) / 7) }));
-
-  return (
-    <div className="calendar-wrap">
-      <div className="calendar-months" aria-hidden="true">
-        {monthStarts.map(({ month, week }) => <span key={month} style={{ left: `${(week / 53) * 100}%` }}>{month}</span>)}
-      </div>
-      <div className="calendar-grid" role="group" aria-label="Daily burning activity during 2025">
-        {Array.from({ length: firstOffset }, (_, index) => <span aria-hidden="true" className="calendar-blank" key={`blank-${index}`} />)}
-        {days.map((day, index) => {
-          const intensityValue = view === "RAW" ? day.observations / 4.3 : day.activity;
-          const intensity = intensityValue === 0 ? 0 : Math.max(1, Math.min(5, Math.ceil(intensityValue / 20)));
-          return (
-            <button
-              key={day.key}
-              type="button"
-              aria-label={`${dayLabel(day.date)}: ${day.observations} observations, ${day.activity} harmonized activity, ${day.frp} MW FRP, ${day.anomaly}% anomaly`}
-              aria-pressed={dateKey(selectedDate) === day.key}
-              className={`calendar-day intensity-${intensity} ${index >= 170 ? "tooltip-align-end" : "tooltip-align-start"}${dateKey(selectedDate) === day.key ? " is-selected" : ""}`}
-              title={`${dayLabel(day.date)} · ${day.observations} fire observations · ${day.activity} harmonized activity · ${day.meanFrp} MW mean FRP · ${day.frp.toLocaleString()} MW peak FRP · ${day.anomaly > 0 ? "+" : ""}${day.anomaly}% anomaly`}
-              onClick={() => onSelect(day.date)}
-            ><span className="calendar-tooltip"><strong>{dayLabel(day.date)}</strong><span>{day.observations.toLocaleString()} fire observations</span><span>{day.activity} harmonized activity</span><span>Mean FRP {day.meanFrp} MW · Peak {day.frp.toLocaleString()} MW</span><span>Anomaly {day.anomaly > 0 ? "+" : ""}{day.anomaly}%</span></span></button>
-          );
-        })}
-      </div>
-      <div className="calendar-legend"><span>Low</span>{[1, 2, 3, 4, 5].map((level) => <i className={`intensity-${level}`} key={level} />)}<span>High</span></div>
-    </div>
-  );
-}
-
-function SeasonalChart({ selectedDate, activity, anomaly, view }: { selectedDate: Date; activity: number; anomaly: number; view: "RAW" | "HARMONIZED" }) {
-  const selectedMonth = selectedDate.getMonth();
-  const selectedActivity = view === "RAW" ? Math.round(activity * 0.78) : activity;
-  const selectedBaseline = Math.max(1, Math.round(selectedActivity / (1 + anomaly / 100)));
-  const baselinePoints = [
-    { month: 0, value: 16, baseline: 20 }, { month: 1, value: 22, baseline: 23 }, { month: 2, value: 72, baseline: 51 },
-    { month: 3, value: 43, baseline: 35 }, { month: 4, value: 28, baseline: 33 }, { month: 5, value: 38, baseline: 42 },
-    { month: 6, value: 55, baseline: 53 }, { month: 7, value: 76, baseline: 65 }, { month: 8, value: 87, baseline: 78 },
-    { month: 9, value: 64, baseline: 62 }, { month: 10, value: 33, baseline: 38 }, { month: 11, value: 18, baseline: 24 },
-  ];
-  const points = baselinePoints.map((point, index) => index === selectedMonth ? { ...point, value: selectedActivity, baseline: selectedBaseline } : point);
-  const x = (index: number) => 42 + index * 51;
-  const y = (value: number) => 176 - value * 1.55;
-  const line = (key: "value" | "baseline") => points.map((point, index) => `${index === 0 ? "M" : "L"}${x(index)},${y(point[key])}`).join(" ");
-  const range = `${points.map((point, index) => `${index === 0 ? "M" : "L"}${x(index)},${y(point.baseline + 11)}`).join(" ")} ${points.slice().reverse().map((point, reverseIndex) => { const index = points.length - 1 - reverseIndex; return `L${x(index)},${y(point.baseline - 11)}`; }).join(" ")} Z`;
-  const expectedBoundary = selectedActivity > selectedBaseline + 11 ? selectedBaseline + 11 : selectedActivity < selectedBaseline - 11 ? selectedBaseline - 11 : null;
-  return (
-    <svg className="chart-svg" viewBox="0 0 650 230" role="img" aria-label="Monthly burning activity compared to historical seasonal baseline">
-      {[20, 60, 100, 140, 180].map((lineY) => <g key={lineY}><line className="chart-gridline" x1="42" x2="604" y1={lineY} y2={lineY} /><text className="chart-axis" x="30" y={lineY + 3} textAnchor="end">{Math.round((180 - lineY) / 1.55)}</text></g>)}
-      <path className="chart-range" d={range} />
-      {expectedBoundary !== null && <rect className="chart-anomaly-region" x={x(selectedMonth) - 5} y={Math.min(y(selectedActivity), y(expectedBoundary))} width="10" height={Math.max(2, Math.abs(y(selectedActivity) - y(expectedBoundary)))} />}
-      <path className="chart-baseline" d={line("baseline")} />
-      <path className="chart-observed" d={line("value")} />
-      <line className="chart-selected-guide" x1={x(selectedMonth)} x2={x(selectedMonth)} y1="20" y2="178" />
-      {points.map((point, index) => <g key={index}><circle className={index === selectedMonth ? "chart-point chart-point-selected" : "chart-point"} cx={x(index)} cy={y(point.value)} r={index === selectedMonth ? "5" : "3.5"} aria-label={`${monthNames[index]}: activity index ${point.value}`}><title>{`${monthNames[index]}: activity index ${point.value}${index === selectedMonth ? " · selected period" : ""}`}</title></circle><text className="chart-axis" x={x(index)} y="204" textAnchor="middle">{monthNames[index]}</text></g>)}
-    </svg>
-  );
-}
-
-function FrpChart({ selectedDate, filters }: { selectedDate: Date; filters: DashboardFilters }) {
-  const daysInMonth = new Date(2025, selectedDate.getMonth() + 1, 0).getDate();
-  const values = Array.from({ length: daysInMonth }, (_, index) => dailyActivity(new Date(2025, selectedDate.getMonth(), index + 1), filters).frp);
-  const selectedIndex = selectedDate.getDate() - 1;
-  const x = (index: number) => 42 + index * (562 / Math.max(1, values.length - 1));
-  const y = (value: number) => 175 - (value / 10) * 1.17;
-  const path = values.map((value, index) => `${index === 0 ? "M" : "L"}${x(index)},${y(value)}`).join(" ");
-  const area = `${path} L${x(values.length - 1)},178 L${x(0)},178 Z`;
-  return (
-    <svg className="chart-svg" viewBox="0 0 650 230" role="img" aria-label="Daily fire radiative power during March 2025">
-      {[40, 80, 120, 160].map((lineY) => <g key={lineY}><line className="chart-gridline" x1="42" x2="604" y1={lineY} y2={lineY} /><text className="chart-axis" x="30" y={lineY + 3} textAnchor="end">{Math.round((178 - lineY) * 10 / 1.17)}</text></g>)}
-      <path className="frp-area" d={area} /><path className="frp-line" d={path} />
-      {values.map((value, index) => <circle className={index === selectedIndex ? "frp-point frp-point-selected" : "frp-point"} cx={x(index)} cy={y(value)} key={index} r={index === selectedIndex ? "4" : "2"} aria-label={`${index + 1} ${monthNames[selectedDate.getMonth()]} 2025: ${value} MW`}><title>{`${index + 1} ${monthNames[selectedDate.getMonth()]} 2025 · ${value} MW${index === selectedIndex ? " · selected date" : ""}`}</title></circle>)}
-      {[1, 8, 15, 22, 29].filter((day) => day <= daysInMonth).map((day) => <text className="chart-axis" key={day} x={x(day - 1)} y="204" textAnchor="middle">{String(day).padStart(2, "0")} {monthNames[selectedDate.getMonth()]}</text>)}
-    </svg>
-  );
-}
-
-function ResponderBrief({
-  date,
-  observationsCount,
-  peakFrp,
-  anomaly,
-  status,
-  dominantSensor,
-  confidence,
-  aoi,
-  observations,
-  view,
-  mapStyle,
-  recenterKey,
-  selectedObservation,
-  onSelectObservation,
-  onClose,
-}: {
-  date: string;
-  observationsCount: number;
-  peakFrp: string;
-  anomaly: number;
-  status: string;
-  dominantSensor: string;
-  confidence: string;
-  aoi: AreaOfInterest;
-  observations: FireMapObservation[];
-  view: "RAW" | "HARMONIZED";
-  mapStyle: "standard" | "light";
-  recenterKey: number;
-  selectedObservation: FireMapObservation | null;
-  onSelectObservation: (observationId: string) => void;
-  onClose: () => void;
-}) {
-  const [shareStatus, setShareStatus] = useState("");
-
-  async function shareBrief() {
-    const summary = `Fire Harmonize responder brief | ${aoi} | ${date} | ${observationsCount.toLocaleString()} observations | Peak FRP ${peakFrp} MW | ${anomaly > 0 ? "+" : ""}${anomaly}% vs seasonal baseline | ${status} | DEMO DATA`;
-    try {
-      await navigator.clipboard.writeText(summary);
-      setShareStatus("Brief summary copied.");
-    } catch {
-      setShareStatus(summary);
-    }
-  }
-
-  return (
-    <div className="methods-backdrop brief-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section className="methods-dialog brief-dialog" role="dialog" aria-modal="true" aria-labelledby="brief-title">
-        <div className="methods-header">
-          <div><span className="section-kicker">FIELD SUMMARY · DEMONSTRATION</span><h2 id="brief-title">Responder Brief</h2></div>
-          <button aria-label="Close responder brief" type="button" onClick={onClose}><X /></button>
-        </div>
-        <p className="brief-location">{aoi} <span>·</span> {date}</p>
-        <div className="brief-map" aria-label={`Map of ${aoi} with filtered fire observations`}>
-          <CaliforniaMap observations={observations} view={view} aoi={aoi} mapStyle={mapStyle} recenterKey={recenterKey} zoomOffset={-1} selectedObservation={selectedObservation} onSelect={onSelectObservation} />
-        </div>
-        <dl className="brief-metrics">
-          <div><dt>Burning activity</dt><dd>{status}</dd></div>
-          <div><dt>Observation count</dt><dd>{observationsCount.toLocaleString()}</dd></div>
-          <div><dt>Peak FRP</dt><dd>{peakFrp} MW</dd></div>
-          <div><dt>Historical baseline</dt><dd>{anomaly > 0 ? "+" : ""}{anomaly}% vs seasonal baseline</dd></div>
-          <div><dt>Anomaly status</dt><dd>{Math.abs(anomaly) >= 20 ? "Unusual activity" : "Within typical range"}</dd></div>
-          <div><dt>Dominant sensor</dt><dd>{dominantSensor}</dd></div>
-          <div><dt>Confidence</dt><dd>{confidence}</dd></div>
-        </dl>
-        <div className="brief-attribution"><strong>NASA Earth Observation Data</strong><span>MODIS Active Fire · VIIRS 375m Active Fire</span><small>Product names identify intended sources; this brief uses illustrative static values, not live NASA data.</small></div>
-        <div className="brief-actions">
-          <button type="button" onClick={() => window.print()}><Printer />Export PDF</button>
-          <button type="button" onClick={shareBrief}><ClipboardCopy />Share</button>
-        </div>
-        <p className="brief-prototype">Prototype · Static Dataset{shareStatus && <span role="status">{shareStatus}</span>}</p>
-      </section>
-    </div>
-  );
-}
 
 export default function DashboardPage() {
   const [view, setView] = useState<"RAW" | "HARMONIZED">("RAW");
@@ -347,7 +116,7 @@ export default function DashboardPage() {
   return (
     <main className="dashboard-shell">
       <header className="dashboard-header">
-        <div className="dashboard-brand"><Link href="/" className="brand-mark" aria-label="Fire Harmonize home"><span /></Link><Link href="/" className="brand-name">Ember Grid</Link><span className="brand-divider" /><span className="brand-subtitle">MODIS × VIIRS ACTIVE FIRE</span></div>
+        <div className="dashboard-brand"><Link href="/" className="brand-mark" aria-label="Ember Grid home"><span /></Link><Link href="/" className="brand-name">Ember Grid</Link><span className="brand-divider" /><span className="brand-subtitle">MODIS × VIIRS ACTIVE FIRE</span></div>
         <nav className="dashboard-nav" aria-label="Main navigation"><a className="nav-active" href="/dashboard">Dashboard</a><button ref={methodsTriggerRef} className="nav-methods" type="button" onClick={() => setMethodsOpen(true)}>Methods &amp; Provenance</button></nav>
         <div className="demo-status"><span className="demo-status-dot" />NASA DATA <i /> DEMO DATA</div>
       </header>
@@ -409,7 +178,7 @@ export default function DashboardPage() {
           <article className="panel chart-panel"><div className="panel-heading chart-heading"><div><span className="section-kicker">THERMAL INTENSITY</span><h3>Fire Radiative Power Over Time</h3><p>Daily peak fire radiative power · {monthNames[selectedDate.getMonth()]} 2025 · selected date highlighted</p></div><button className="chart-menu" type="button" title="Chart information"><Info /></button></div><div className="frp-chart-label">FRP <small>(MW)</small></div><FrpChart selectedDate={selectedDate} filters={filters} /><div className="chart-footer"><span>01 {monthNames[selectedDate.getMonth()].toUpperCase()} 2025</span><span>PEAK <strong>{Math.max(...Array.from({ length: frpMonthDays }, (_, index) => dailyActivity(new Date(2025, selectedDate.getMonth(), index + 1), filters).frp)).toLocaleString()} MW</strong></span><span>{String(frpMonthDays).padStart(2, "0")} {monthNames[selectedDate.getMonth()].toUpperCase()} 2025</span></div></article>
         </div></section>
 
-        <footer className="dashboard-footer"><span><Satellite />FIRE HARMONIZE <i /> STATIC FRONTEND PROTOTYPE</span><span>NO NASA API CONNECTION · VALUES FOR DEMONSTRATION ONLY</span></footer>
+        <footer className="dashboard-footer"><span><Satellite />Ember Grid <i /> STATIC FRONTEND PROTOTYPE</span><span>NO NASA API CONNECTION · VALUES FOR DEMONSTRATION ONLY</span></footer>
       </div>
       {methodsOpen && <div className="methods-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setMethodsOpen(false); }}><section className="methods-dialog" role="dialog" aria-modal="true" aria-labelledby="methods-title"><div className="methods-header"><div><span className="section-kicker">TRANSPARENT BY DESIGN</span><h2 id="methods-title">Methods &amp; Provenance</h2></div><button aria-label="Close methods and provenance" type="button" onClick={() => setMethodsOpen(false)}><X /></button></div><p className="methods-prototype-label">PROTOTYPE PROCESSING FRAMEWORK · NOT AN EXECUTED PIPELINE</p><div className="methods-sources"><div><span>NASA DATA SOURCE</span><strong>MODIS Active Fire</strong><small>~1 km · Terra / Aqua · long historical record</small></div><div><span>NASA DATA SOURCE</span><strong>VIIRS 375m Active Fire</strong><small>375 m · Suomi NPP / NOAA-20 / NOAA-21</small></div></div><div className="methods-flow"><div className="methods-sensor-step"><strong>MODIS</strong><span>~1 km · long historical record</span></div><div className="methods-sensor-step"><strong>VIIRS</strong><span>~375 m · higher spatial detail</span></div><i>↓</i><span>Sensor-aware harmonization</span><i>↓</i><span>Common burning-activity representation</span></div><div className="methods-detail-grid"><div><strong>Processing &amp; alignment</strong><span>A proposed workflow aligns observations across space and time before sensor-aware comparison; no processing runs in this demo.</span></div><div><strong>Confidence handling</strong><span>Source confidence is retained as context for interpreting observations, not presented as a guarantee.</span></div><div><strong>Historical baseline</strong><span>Seasonal activity is compared with a typical historical pattern; this prototype uses illustrative values.</span></div></div>
       </section>

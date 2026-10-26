@@ -96,7 +96,7 @@ export default function Home() {
               <span className="size-2.5 shrink-0 rounded-full bg-orange ring-4 ring-orange-soft/60" />
             </div>
             <div className="telemetry-scene relative my-1 flex min-h-[390px] flex-1 items-center justify-center overflow-hidden rounded-md bg-surface-low md:min-h-[440px]">
-              <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(17,28,45,.12),transparent_45%),url('https://lh3.googleusercontent.com/aida-public/AB6AXuBl8YSs2ZEjLwiNsJ91YZTqfiGLKr5zsJaoYSMwm-Ou_7NLgswnc33mwAtGUKebZaXadOlUPKMUY7b02iVEfMaAdfWZwqns-UL3H3fTvg_CqETnveFzulkKXYwAA66-6Rkhyk2O-m5ohHa0n7NH9X0XbdxehZnAdWgHei8I2t0s_aCs6d4_ZzwhW9XNllRl_THRY4eBzxAq1R_vlmftCi8-D1HeDBEBl-nA2CMRhooQQ2UCgpLAFsoikg')] bg-cover bg-center transition-transform duration-500 ease-out hover:scale-[1.02]" role="img" aria-label="Satellite visualization of global fire activity" />
+              <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(17,28,45,.12),transparent_45%),url('/screen.png')] bg-cover bg-center transition-transform duration-500 ease-out hover:scale-[1.02]" role="img" aria-label="Satellite visualization of global fire activity" />
               <div className="absolute left-3 top-3 rounded bg-white/90 px-2 py-1 shadow-sm backdrop-blur-sm">
                 <span className="font-mono text-[10px] text-ink">GRID [0.01° × 0.01°]</span>
               </div>
@@ -121,7 +121,7 @@ export default function Home() {
 
       <footer className="w-full border-t border-line/60 bg-white py-4">
         <div className="mx-auto flex max-w-[1440px] flex-col items-center justify-between gap-2 px-4 md:flex-row md:px-6 lg:px-10">
-          <p className="text-center font-mono text-[10px] text-ink-muted md:text-left">Fire Harmonize · static frontend prototype</p>
+          <p className="text-center font-mono text-[10px] text-ink-muted md:text-left">Ember Grid · static frontend prototype</p>
           <p className="font-mono text-[10px] text-ink-muted">NO LIVE DATA CONNECTION · DEMONSTRATION ONLY</p>
         </div>
       </footer>
