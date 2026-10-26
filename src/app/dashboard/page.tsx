@@ -117,7 +117,7 @@ export default function DashboardPage() {
     <main className="dashboard-shell">
       <header className="dashboard-header">
         <div className="dashboard-brand"><Link href="/" className="brand-mark" aria-label="Ember Grid home"><span /></Link><Link href="/" className="brand-name">Ember Grid</Link><span className="brand-divider" /><span className="brand-subtitle">MODIS × VIIRS ACTIVE FIRE</span></div>
-        <nav className="dashboard-nav" aria-label="Main navigation"><a className="nav-active" href="/dashboard">Dashboard</a><button ref={methodsTriggerRef} className="nav-methods" type="button" onClick={() => setMethodsOpen(true)}>Methods &amp; Provenance</button></nav>
+        <nav className="dashboard-nav" aria-label="Main navigation"><a className="nav-active" href="/dashboard">Dashboard</a><Link href="/dashboard/reports">Reports</Link><button ref={methodsTriggerRef} className="nav-methods" type="button" onClick={() => setMethodsOpen(true)}>Methods &amp; Provenance</button></nav>
         <div className="demo-status"><span className="demo-status-dot" />NASA DATA <i /> DEMO DATA</div>
       </header>
 
